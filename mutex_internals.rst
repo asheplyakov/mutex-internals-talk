@@ -433,6 +433,86 @@ Reconsidering Lamport's algorithm
 
 ----
 
+Linux: compare-and-swap + sys_futex
+===================================
+
+
+What's sys_futex?
+-----------------
+
+.. code:: C
+
+  int futex(int* uaddr, int op, int val1,
+            const struct timespec* timeout,
+            int* uaddr2, int val3);
+
+
+* FUTEX_WAIT causes the calling thread to be suspended in the kernel until
+  notified (presumably by FUTEX_WAKE). Before suspending the thread the value
+  at address `uaddr` is checked. If it is **not** the same as the `val1`
+  parameter the system call returns immediately with the `EWOULDBLOCK` error.
+  If the `timeout` parameter is not NULL, the calling thread suspended only
+  for a limited time. If the time runs out without a notification being sent
+  the system call returns with the `ETIMEDOUT` error.
+
+* FUTEX_WAKE wakes up one or more threads waiting on the futex. Only `uaddr`,
+  `op`, and `val1` parameters are used. The value of `val1` specifies the number
+  of threads the caller wants to wake. The return value is the number of threads
+  which have been queued and have been woken up.
+
+
+----
+
+Mutual exclusion based on sys_futex, take 1
+-------------------------------------------
+
+.. code:: C
+
+   void broken_mutex_lock(int* mutex) {
+     int c;
+     while ((c = __sync_fetch_and_add(mutex, 1)) != 0) {
+       syscall(SYS_futex, mutex, FUTEX_WAIT, c + 1, NULL, NULL, 0);
+     }
+   }
+
+   void broken_mutex_unlock(int* mutex) {
+     *mutex = 0; //*
+     syscall(SYS_futex, mutex, FUTEX_WAKE, 1, NULL, NULL, 0);
+   }
+
+
+Problems
+--------
+
+The algorithm guarantees mutual exclusion. But what about progress?
+
+Livelock
+~~~~~~~~
+
++---------------------------+----------------------------+--------------+
+|  thread 0                 |    thread 1                |  mutex value |
++===========================+============================+==============+
+| atomic_inc                |  [pre-emptied]             |       1      |
++---------------------------+----------------------------+--------------+
+| [pre-emptied]             |  atomic_inc                |       2      |
++---------------------------+----------------------------+--------------+
+| futex_wait(1) EWOULDBLOCK |  [pre-emptied]             |       2      |
++---------------------------+----------------------------+--------------+
+| atomic_inc                |  futex_wait(2) EWOULDBLOCK |       3      |
++---------------------------+----------------------------+--------------+
+| [pre-emptied]             |  atomic_inc                |       4      |
++---------------------------+----------------------------+--------------+
+| futex_wait(2) EWOULDBLOCK |  [pre-emptied]             |       4      |
++---------------------------+----------------------------+--------------+
+| atomic_inc                |  futex_wait(4)             |       5      |
++---------------------------+----------------------------+--------------+
+
+
+Both threads can contend this way forever. That's a `live lock`_.
+
+.. _live lock: https://en.wikipedia.org/wiki/Deadlock#Livelock
+
+
 Links
 =====
 
