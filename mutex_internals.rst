@@ -581,13 +581,65 @@ Both threads can contend this way forever. That's a `live lock`_.
 .. _live lock: https://en.wikipedia.org/wiki/Deadlock#Livelock
 
 
+----
+
+Mutual exclusion based on sys_futex, take 2
+-------------------------------------------
+
+.. code:: C
+
+  void enter(int *mutex) {
+      int c;
+      if ((c == __sync_val_compare_and_swap(mutex, 0, 1)) != 0 /* A0 */) {
+          // somebody tries to lock the mutex (or has already locked it),
+          // add the calling thread to the wait queue
+          do {
+             if (c == 2 // there are threads waiting for a mutex (perhaps)
+                 || __sync_val_compare_and_swap(mutex, 1, 2) != 0 /* A1 */
+                 // otherwise mark the mutex as having waiters, ...
+                ) {
+                   // ... add the calling thread to the wait queue, and wait
+                   syscall(SYS_futex, mutex, FUTEX_WAIT, 2, NULL, NULL, 0);
+              } else {
+                  // compare-and-swap at A1 returned 0. Perhaps the other
+                  // thread has unlocked the mutex. Try to grab the mutex
+                  // once again immediately (without waiting in the kernel).
+                  // Unfortunately we can't just proceed to the critical
+                  // section since the mutex hasn't been marked as locked.
+             }
+          } while (
+              // Try to lock once again. The control reaches here either
+              // when the kernel has woken up the calling thread, or we've
+              // decided to skip waiting in the kernel. In both cases there
+              // might be other threads waiting for this mutex. This "might be"
+              // is a bit irritating, but it's better to be safe than sorry.
+              (c = __synv_val_compare_and_swap(mutex, 0, 2)) != 0 /* A2 */);
+      } else {
+          // uncontested: locked with a single instruction
+      }
+  }
+
+  void leave(int *mutex) {
+      if (__sync_fetch_and_sub(mutex, 1) != 1) {
+          // there might be threads waiting for the mutex
+          *mutex = 0;
+          // Wake up a single thread to avoid multiple CPUs fighting
+          // for the same cache line. Also only one of those threads
+          // will be able to acquire the mutex anyway.
+          syscall(SYS_futex, mutex, FUTEX_WAKE, 1, NULL, NULL, 0);
+      }
+  }
+
+
 Links
 =====
 
 * `A primer on memory consistency and cache coherence`_ by Daniel J. Sorin, Mark D. Hill, David A. Wood
 * `A new solution of Dijkstra's concurrent programming problem`_ by Leslie Lamport
 * `A tutorial introduction to the ARM and POWER relaxed memory models`_ by Luc Maranget, Susmit Sarkar, Peter Sewell
+* `Futexes are tricky`_ by Ulrich Drepper
 
 .. _A primer on memory consistency and cache coherence: https://dl.acm.org/citation.cfm?id=2028905
 .. _A new solution of Dijkstra's concurrent programming problem: http://lamport.azurewebsites.net/pubs/bakery.pdf
 .. _A tutorial introduction to the ARM and POWER relaxed memory models: https://www.cl.cam.ac.uk/~pes20/ppc-supplemental/test7.pdf
+.. _Futexes are tricky: https://www.akkadia.org/drepper/futex.pdf

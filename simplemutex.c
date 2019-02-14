@@ -41,7 +41,7 @@ void simple_mutex_lock(mutex_t mutex) {
 	      * the kernel. In both cases there might be other waiters. This
 	      * "might be" is a bit irritating, but it's better to be safe than sorry.
 	      */
-	     (c == __sync_val_compare_and_swap(mutex, 0, 2)) != 0 /* A2 */);
+	     (c = __sync_val_compare_and_swap(mutex, 0, 2)) != 0 /* A2 */);
     } else {
         /* uncontested: we've locked the mutex with a single instruction
 	 * (the old state is `unlocked`, and the current is `no waiters`)
