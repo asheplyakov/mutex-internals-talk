@@ -430,6 +430,37 @@ Reconsidering Lamport's algorithm
 
 .. _false sharing: https://en.wikipedia.org/wiki/False_sharing
 
+----
+
+TL;DR version of part 1
+=======================
+
+* Humans assume memory operations to occur in a certain order, presumably
+  in the same order as in the (machine code) program.
+
+* In reality the memory system (write buffers + caches + NUMA interconnets)
+  does **NOT** execute loads and stores in the program order and is free
+  to reorder them subject to certain set of invariants (called *memory model*).
+
+* One of the most widespread memory models is *Total Store Order* (TSO):
+  all CPUs observe stores in the same order (and stores of a specific CPU
+  occur according to its program order). In other words, load can be moved
+  ahead of store (to a different address).
+
+* With TSO this program
+
+  +--------------------+------------------+
+  |      CPU 0         |        CPU 1     |
+  +====================+==================+
+  |     X = 1          |      Y = 1       |
+  +--------------------+------------------+
+  |     r0 = Y         |      r1 = X      |
+  +--------------------+------------------+
+
+  (assuming initially X == Y == 0) can result in r0 == r1 == 0.
+
+* Such reordering breaks classical mutual exclusion algorithms (Lamport, Peterson, etc).
+
 
 ----
 
