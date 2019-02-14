@@ -461,6 +461,43 @@ TL;DR version of part 1
 
 * Such reordering breaks classical mutual exclusion algorithms (Lamport, Peterson, etc).
 
+----
+
+Mutex versus spinlock
+=====================
+
+Both mutexes and splinlocks guarantee mutual exclusion. However mutex
+cooperates with the operating system and 
+
+- suspends the calling thread if it failed to enter the critical section
+- wakes the calling thread up when it makes sense to retry entering
+
+Thus the algorithms discussed so far are not mutexes. They are (broken)
+spinlocks.
+
+
+Unfair spinlock
+===============
+
+.. code:: C
+
+  void lock(int* lock) {
+       while (__sync_compare_and_swap(lock, 0, 1) == 0) { }
+  }
+
+  void unlock(int* lock) {
+       *lock = 0;
+  }
+
+
+* Simple and correct
+* **NOT** fair: the CPU which has just released a lock has an advantage to
+  quickly reacquire the lock (since the CPU owns the cache line)
+* Unfairness is extremely noticable with NUMA (for instance 2-, 4-socket x86_64 CPUs)
+  (some threads are starved or "unfairly" granted lock up to 10^6 times)
+
+A (more) fair implementation will be considered later on (during/after
+the discussion of lockless data structures)
 
 ----
 
