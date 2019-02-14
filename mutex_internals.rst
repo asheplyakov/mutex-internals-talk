@@ -28,10 +28,12 @@ Part 1
 Part 2
 ------
 
+#. `TL;DR version of part 1`_
+
 #. Modern implementations
 
-   - Linux: compare-and-swap + sys_futex
-   - Sketch of sys_futex implementation
+   - `Mutex versus spinlock`_
+   - `Linux: compare-and-swap + sys_futex`_
 
 Part 3
 ------
@@ -460,6 +462,9 @@ TL;DR version of part 1
   (assuming initially X == Y == 0) can result in r0 == r1 == 0.
 
 * Such reordering breaks classical mutual exclusion algorithms (Lamport, Peterson, etc).
+* To force the memory ordering CPUs provide special instructions memory
+  barriers and atomic instructions
+
 
 ----
 
@@ -630,6 +635,46 @@ Mutual exclusion based on sys_futex, take 2
       }
   }
 
+----
+
+
+Sketch of sys_futex implementation
+==================================
+
+* The kernel uses the physical address of the futex as its identifier
+* Futexes and threads waiting for them are maintained as a hash table
+* This hash table is protected by a spinlock
+
+
+FUTEX_WAIT
+----------
+
+.. code:: C
+
+  int futex(int* uaddr, int op, int val1,
+            const struct timespec* timeout,
+            int* uaddr2, int val3);
+
+* Marks the calling thread as interruptible and places it to
+  the `futex_queues` hash table.
+* Maps the page containing the futex (passed as a virtual address
+  `uaddr`) and checks if the current futex value matches `val1`
+* If not, set error to EWOULDBLOCK
+* Otherwise sleep for the time inidicated by the `timeout` argument,
+  or indefinitely if it's NULL
+* On timeout set error to ETIMEDOUT, otherwise set error to EINTR if
+  there is a signal pending
+* Try to remove the calling thread from the `futex_queues`, if already
+  removed return 0 (success) uncoditionally (means the thread was waken
+  up), otherwise return the error set above
+
+
+FUTEX_WAKE
+----------
+
+* Finds threads waiting for the specified futex, wakes at most `val1` of them
+
+----
 
 Links
 =====
@@ -637,9 +682,11 @@ Links
 * `A primer on memory consistency and cache coherence`_ by Daniel J. Sorin, Mark D. Hill, David A. Wood
 * `A new solution of Dijkstra's concurrent programming problem`_ by Leslie Lamport
 * `A tutorial introduction to the ARM and POWER relaxed memory models`_ by Luc Maranget, Susmit Sarkar, Peter Sewell
+* `Fuss, futexes, and furwlocks: fast user level locking in Linux`_ by Hubertus Franke, Rusty Russel
 * `Futexes are tricky`_ by Ulrich Drepper
 
 .. _A primer on memory consistency and cache coherence: https://dl.acm.org/citation.cfm?id=2028905
 .. _A new solution of Dijkstra's concurrent programming problem: http://lamport.azurewebsites.net/pubs/bakery.pdf
 .. _A tutorial introduction to the ARM and POWER relaxed memory models: https://www.cl.cam.ac.uk/~pes20/ppc-supplemental/test7.pdf
+.. _`Fuss, futexes, and furwlocks: fast user level locking in Linux`: https://www.kernel.org/doc/ols/2002/ols2002-pages-479-495.pdf
 .. _Futexes are tricky: https://www.akkadia.org/drepper/futex.pdf
