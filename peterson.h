@@ -1,7 +1,12 @@
-#ifndef PETERSON_MUTEX_H
-#define PETERSON_MUTEX_H
+#pragma once
 
-extern void enter(int id);
-extern void leave(int id);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#endif /* PETERSON_MUTEX_H */
+void cs_enter(int id);
+void cs_leave(int id);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

@@ -1,0 +1,27 @@
+CXX = g++
+CC = gcc
+
+CXXFLAGS = -O2 -g -flto -Wall
+DEFINES = 
+CFLAGS = -O2 -g -flto -Wall
+
+rule cxx11
+    command = $CXX $DEFINES -std=c++11 $CXXFLAGS -c -o $out $in
+
+rule cc
+    command = $CC $DEFINES -std=gnu89 $CFLAGS -c -o $out $in
+
+rule cxx_link
+    command = $CXX $CXXFLAGS -o $out $in
+
+
+build peterson_test: cxx_link peterson_test.o peterson.o
+build broken_peterson_test: cxx_link peterson_test.o broken_peterson.o
+build std_mutex_test: cxx_link std_mutex_test.o
+build peterson_test.o: cxx11 mutex_test.cc
+build std_mutex_test.o: cxx11 mutex_test.cc
+   DEFINES = -DUSE_STD_MUTEX
+build peterson.o: cc peterson.c
+build broken_peterson.o: cc peterson.c
+   DEFINES = -DSKIP_MFENCE
+
