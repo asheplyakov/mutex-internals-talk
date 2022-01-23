@@ -26,27 +26,21 @@ static void unlock(peterson_spinlock& lk, int id) {
 }
 #endif
 
-static void loop_for(unsigned long usec, std::function<void()>&& fcn) {
-	using hrc = std::chrono::high_resolution_clock;
-	auto start = hrc::now();
-	auto end = start + std::chrono::microseconds(usec);
-	while (hrc::now() < end) {
-		fcn();
-	}
-}
-
-static volatile int flag = 0;
+static volatile int flag = -1;
 static volatile int error_count = 0;
 static lock_t flag_lock = {};
 
 static void run(int id, int iterations) {
+	using rolex = std::chrono::high_resolution_clock;
 	for (int i = 0; i < iterations; i++) {
 		lock(flag_lock, id);
-		flag = id + 1;
-		loop_for(1UL, [=]() {
-			if (flag != id + 1) {
+		flag = id;
+		auto end = rolex::now() + std::chrono::microseconds(1);
+		do {
+			if (flag != id) {
 				error_count++;
-			}});
+			}
+		} while (rolex::now() < end);
 		unlock(flag_lock, id);
 	}
 }
@@ -62,8 +56,6 @@ int main(int argc, char **argv) {
 	t1.join();
 	if (error_count != 0) {
 		std::printf("iterations: %d, errors: %d\n", iterations, error_count);
-		return 1;
-	} else {
-		return 0;
 	}
+	return error_count != 0;
 }

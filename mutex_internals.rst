@@ -83,21 +83,21 @@ These assumptions look reasonable. Do they?
 
 .. code:: CXX
 
-  static volatile int flag = 0;
+  static volatile int flag = -1;
   static volatile int error_count = 0;
   static peterson_spinlock flag_lock = {};
 
   static void run(int id, int iterations) {
+    using now = std::chrono::high_resolution_clock::now;
     for (int i = 0; i < iterations; i++) {
       peterson_lock(&flag_lock, id);
-      flag = id + 1;
-      auto start = high_resolution_clock::now();
-      auto end = start + microseconds(1);
-      while (high_resolution_clock::now() < end) {
-        if (flag != id + 1) {
+      flag = id;
+      auto end = now() + std::chrono::microseconds(1);
+      do {
+        if (flag != id) {
           error_count++;
         }
-      }
+      } while (now() < end);
       peterson_unlock(&flag_lock, id);
     }
   }
@@ -115,7 +115,6 @@ These assumptions look reasonable. Do they?
       return 0;
     }
   }
-
 
 
 ----
