@@ -3,7 +3,6 @@
 #include <functional>
 #include <mutex>
 #include <thread>
-#include <vector>
 #include <chrono>
 #include "peterson.h"
 
@@ -57,13 +56,10 @@ int main(int argc, char **argv) {
 	if (!iterations) {
 		iterations = 1000*1000*10;
 	}
-	std::vector<std::thread> threads;
-	threads.emplace_back(run, 0, iterations);
-	threads.emplace_back(run, 1, iterations);
-
-	for (auto& t: threads) {
-		t.join();
-	}
+	std::thread t0{run, 0, iterations};
+	std::thread t1{run, 1, iterations};
+	t0.join();
+	t1.join();
 	std::printf("iterations: %d, errors: %d\n", iterations, error_count);
 	return 0;
 }
