@@ -1,18 +1,16 @@
+#include "peterson.h"
 #include "compiler.h"
 
-static volatile int wants_to_enter[2] = { 0, 0 };
-static volatile int looser = 0;
-
-NOINLINE void cs_enter(int id) {
+NOINLINE void peterson_lock(struct peterson_spinlock *lk, int id) {
 	int other = 1 - id;
-	wants_to_enter[id] = 1;
-	looser = id;
+	lk->wants_to_enter[id] = 1;
+	lk->looser = id;
 #ifndef SKIP_MFENCE
 	asm volatile ("mfence" ::: "memory");
 #endif
-	while (wants_to_enter[other] && (looser == id)) { /* wait */ }
+	while (lk->wants_to_enter[other] && (lk->looser == id)) { /* wait */ }
 }
 
-NOINLINE void cs_leave(int id) {
-	wants_to_enter[id] = 0;
+NOINLINE void peterson_unlock(struct peterson_spinlock *lk, int id) {
+	lk->wants_to_enter[id] = 0;
 }

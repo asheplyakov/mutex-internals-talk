@@ -7,25 +7,23 @@
 #include <chrono>
 #include "peterson.h"
 
-static volatile int flag = 0;
-static volatile int error_count = 0;
 #ifdef USE_STD_MUTEX
-static std::mutex flag_mutex = {};
-#endif
-
-#ifdef USE_STD_MUTEX
-static inline void flag_lock(int /* id */) {
-	flag_mutex.lock();
+typedef std::mutex lock_t;
+static void lock(std::mutex& lk, int /* id */) {
+	lk.lock();
 }
-static inline void flag_unlock(int /* id */) {
-	flag_mutex.unlock();
+
+static void unlock(std::mutex& lk, int /* id */) {
+	lk.unlock();
 }
 #else
-static inline void flag_lock(int id) {
-	cs_enter(id);
+typedef peterson_spinlock lock_t;
+static void lock(peterson_spinlock& lk, int id) {
+	peterson_lock(&lk, id);
 }
-static inline void flag_unlock(int id) {
-	cs_leave(id);
+
+static void unlock(peterson_spinlock& lk, int id) {
+	peterson_unlock(&lk, id);
 }
 #endif
 
@@ -38,15 +36,19 @@ static void loop_for(unsigned long usec, std::function<void()>&& fcn) {
 	}
 }
 
+static volatile int flag = 0;
+static volatile int error_count = 0;
+static lock_t flag_lock = {};
+
 static void run(int id, int iterations) {
 	for (int i = 0; i < iterations; i++) {
-		flag_lock(id);
+		lock(flag_lock, id);
 		flag = id + 1;
 		loop_for(1UL, [=]() {
 			if (flag != id + 1) {
 				error_count++;
 			}});
-		flag_unlock(id);
+		unlock(flag_lock, id);
 	}
 }
 
