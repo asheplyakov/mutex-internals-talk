@@ -60,6 +60,10 @@ int main(int argc, char **argv) {
 	std::thread t1{run, 1, iterations};
 	t0.join();
 	t1.join();
-	std::printf("iterations: %d, errors: %d\n", iterations, error_count);
-	return 0;
+	if (error_count != 0) {
+		std::printf("iterations: %d, errors: %d\n", iterations, error_count);
+		return 1;
+	} else {
+		return 0;
+	}
 }
