@@ -79,7 +79,29 @@ The above code guarantees
 
 provided that the stores are atomic and instantaneous.
 
-These assumptions look reasonable. Do they?
+Proof
+-----
+
+Assume both processors have entered the critical section.
+P0 has entered at cycle C0, P1 at C4, respectively, and C0 < C4.
+
+C0: ``wte[1] == 0 || looser == 1``, and ``wte[0] == 1``
+
+C4: ``wte[0] == 0 || looser == 0``, and ``wte[1] == 1``
+
+``wte[0](C4) == 1`` => ``looser(C4) == 0``.
+
+Only P0 assigns ``looser = 0``, and does so *before* entering. =>
+``wte[1](C0) == 0``. Since ``wte[1](C4) == 1``, it must have been 
+assigned *after* C0 (and before C4). However after assigning
+``wte[1] = 1`` P1 assigns ``looser = 1`` (say, at cycle C3,
+C0 < C3 < C4), and P0 does *not* tuch ``looser`` after C0.
+Therefore ``looser(C4) == 1``, and ``wte[0] == 1``, so P0 could
+not have entered the critical section at C4.
+
+
+Experiment
+----------
 
 .. code:: CXX
 
