@@ -52,18 +52,20 @@ Mutual exclusion for two threads/processes
 
 .. code:: C
 
-  int want_to_enter[2] = { 0, 0 };
-  int looser = 0;
+  struct peterson_spinlock {
+    volatile int wants_to_enter[2];
+    volatile int looser;
+  };
 
-  void enter(int id) {
-      int other = 1 - id;
-      want_to_enter[id] = 1;
-      looser = id;
-      while (want_to_enter[other] && (looser == id)) { }
+  void peterson_lock(struct peterson_spinlock *l, int id) {
+    int other = 1 - id;
+    l->wants_to_enter[id] = 1;
+    l->looser = id;
+    while (l->wants_to_enter[other] && (l->looser == id)) { }
   }
 
-  void leave(int id) {
-      wants_to_enter[id] = 0;
+  void peterson_unlock(struct peterson_spinlock *l, int id) {
+    l->wants_to_enter[id] = 0;
   }
 
 
@@ -76,6 +78,45 @@ The above code guarantees
   eventually succeed
 
 provided that the stores are atomic and instantaneous.
+
+These assumptions look reasonable. Do they?
+
+.. code:: CXX
+
+  static volatile int flag = 0;
+  static volatile int error_count = 0;
+  static peterson_spinlock flag_lock = {};
+
+  static void run(int id, int iterations) {
+    for (int i = 0; i < iterations; i++) {
+      peterson_lock(&flag_lock, id);
+      flag = id + 1;
+      auto start = high_resolution_clock::now();
+      auto end = start + microseconds(1);
+      while (high_resolution_clock::now() < end) {
+        if (flag != id + 1) {
+          error_count++;
+        }
+      }
+      peterson_unlock(&flag_lock, id);
+    }
+  }
+
+  int main(int argc, char **argv) {
+    int iterations = 20*1000*1000;
+    std::thread t0{run, 0, iterations};
+    std::thread t1{run, 1, iterations};
+    t0.join();
+    t1.join();
+    if (error_count != 0) {
+      std::printf("iterations: %d, errors: %d\n", iterations, error_count);
+      return 1;
+    } else {
+      return 0;
+    }
+  }
+
+
 
 ----
 
