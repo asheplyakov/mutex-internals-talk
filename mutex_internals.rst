@@ -96,7 +96,7 @@ Only P0 assigns ``looser = 0``, and does so *before* entering. =>
 assigned *after* C0 (and before C4). However after assigning
 ``wte[1] = 1`` P1 assigns ``looser = 1`` (say, at cycle C3,
 C0 < C3 < C4), and P0 does *not* tuch ``looser`` after C0.
-Therefore ``looser(C4) == 1``, and ``wte[0] == 1``, so P0 could
+Therefore ``looser(C4) == 1``, and ``wte[0](C4) == 1``, so P1 could
 not have entered the critical section at C4.
 
 
