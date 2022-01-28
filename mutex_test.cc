@@ -30,12 +30,12 @@ static volatile int flag = -1;
 static volatile int error_count = 0;
 static lock_t flag_lock = {};
 
-static void run(int id, int iterations) {
+static void run(int id, int iterations, int busyloop_nsecs) {
 	using rolex = std::chrono::high_resolution_clock;
 	for (int i = 0; i < iterations; i++) {
 		lock(flag_lock, id);
 		flag = id;
-		auto end = rolex::now() + std::chrono::microseconds(1);
+		auto end = rolex::now() + std::chrono::nanoseconds(busyloop_nsecs);
 		do {
 			if (flag != id) {
 				error_count++;
@@ -48,14 +48,19 @@ static void run(int id, int iterations) {
 int main(int argc, char **argv) {
 	int iterations = std::atoi(argc > 1 ? argv[1] : "0");
 	if (!iterations) {
-		iterations = 1000*1000*10;
+		iterations = 1000*1000*100;
 	}
-	std::thread t0{run, 0, iterations};
-	std::thread t1{run, 1, iterations};
+	int busyloop_nsecs = std::atoi(argc > 2 ? argv[2] : "0");
+	if (busyloop_nsecs < 10) {
+		busyloop_nsecs = 10;
+	}
+	std::thread t0{run, 0, iterations, busyloop_nsecs};
+	std::thread t1{run, 1, iterations, busyloop_nsecs};
 	t0.join();
 	t1.join();
 	if (error_count != 0) {
-		std::printf("iterations: %d, errors: %d\n", iterations, error_count);
+		std::printf("iterations: %d, errors: %d, busy loop duration %d nsec\n",
+			iterations, error_count, busyloop_nsecs);
 	}
 	return error_count != 0;
 }
