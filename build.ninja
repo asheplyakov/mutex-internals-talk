@@ -22,6 +22,4 @@ build peterson_test.o: cxx11 mutex_test.cc
 build std_mutex_test.o: cxx11 mutex_test.cc
    DEFINES = -DUSE_STD_MUTEX
 build peterson.o: cc peterson.c
-build broken_peterson.o: cc peterson.c
-   DEFINES = -DSKIP_MFENCE
-
+build broken_peterson.o: cc broken_peterson.c
