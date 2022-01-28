@@ -1,9 +1,9 @@
 CXX = g++
 CC = gcc
 
-CXXFLAGS = -O2 -g -flto -Wall
+CXXFLAGS = -O2 -g -flto -Wall -Werror
 DEFINES = 
-CFLAGS = -O2 -g -flto -Wall
+CFLAGS = -O2 -g -flto -Wall -Werror
 
 rule cxx11
     command = $CXX $DEFINES -std=c++11 $CXXFLAGS -c -o $out $in
