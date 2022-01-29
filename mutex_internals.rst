@@ -336,6 +336,19 @@ Real world examples: `SPARC v8`_ and x86_64 have a very similar memory model
 
 .. _SPARC v8: https://www.gaisler.com/doc/sparcv8.pdf
 
+
+X86-TSO
+-------
+
+The memory model of actual x86 CPUs is subtly different
+
+.. image:: x86-TSO.png
+   :alt: x86 TSO block diagram
+   :target: Sewell2010_
+
+.. _Sewell2010: https://www.cl.cam.ac.uk/~pes20/weakmemory/cacm.pdf
+
+
 ----
 
 Processor consistency
