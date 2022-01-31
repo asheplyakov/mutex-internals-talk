@@ -375,10 +375,11 @@ by *memory barrier* instructions.
 
 Motivation: even higher memory throughput and/or a simpler hardware
 
-Real world examples: `IBM POWER`_, `ARM`_
+Real world examples: `IBM POWER`_, `ARM`_, `ARMv8 MCA`_
 
 .. _IBM POWER: https://en.wikipedia.org/wiki/POWER8
 .. _ARM: https://en.wikipedia.org/wiki/ARM_architecture
+.. _ARMv8 MCA: https://www.cl.cam.ac.uk/~pes20/armv8-mca/armv8-mca-draft.pdf
 
 
 ----
